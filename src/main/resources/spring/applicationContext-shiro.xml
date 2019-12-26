@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.0.xsd">
+
+    <!-- 缓存管理器 -->
+    <bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+        <!-- cache配置文件 -->
+        <property name="cacheManagerConfigFile" value="classpath:cache/ehcache.xml" />
+    </bean>
+
+    <!--配置自定义realm-->
+    <bean id="myRealm" class="com.qf.oa.realm.MyRealm">
+        <!--会把前端用户输入的密码自动进行MD5加密-->
+        <property name="credentialsMatcher">
+            <bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+                <!-- 加密的算法 -->
+                <property name="hashAlgorithmName" value="MD5"/>
+                <!--加密次数 -->
+                <property name="hashIterations" value="1024"/>
+            </bean>
+        </property>
+
+    </bean>
+
+    <!--记住我cookie-->
+    <bean id="rememberMeCookie" class="org.apache.shiro.web.servlet.SimpleCookie">
+        <constructor-arg value="rememberMe"/>
+        <property name="httpOnly" value="true"/>
+        <property name="maxAge" value="2592000"/><!-- 30天 -->
+    </bean>
+
+    <!-- rememberMe管理器 -->
+    <bean id="rememberMeManager" class="org.apache.shiro.web.mgt.CookieRememberMeManager">
+        <property name="cookie" ref="rememberMeCookie"/>
+    </bean>
+
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+        <!--配置自定义的realm-->
+        <property name="realm" ref="myRealm"/>
+       <property name="rememberMeManager" ref="rememberMeManager"/>
+        <property name="cacheManager" ref="cacheManager"/>
+    </bean>
+
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor"/>
+
+    <!-- Enable Shiro Annotations for Spring-configured beans.  Only run after
+         the lifecycleBeanProcessor has run: -->
+    <bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+          depends-on="lifecycleBeanPostProcessor"/>
+    <bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+        <property name="securityManager" ref="securityManager"/>
+    </bean>
+
+    <bean id="secureRemoteInvocationExecutor" class="org.apache.shiro.spring.remoting.SecureRemoteInvocationExecutor">
+
+        <property name="securityManager" ref="securityManager"/>
+    </bean>
+
+
+
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <property name="loginUrl" value="/front/login.jsp"/>
+        <property name="securityManager" ref="securityManager"/>
+
+        <!--
+        /favicon.ico = anon
+        左边：表示要访问的资源地址
+        右边：拦截器
+        anon:不需要进行登录认证就可以访问的资源
+        authc:必须进行登录认证才可以访问的资源
+        -->
+        <property name="filterChainDefinitions">
+            <value>
+                <!--  /favicon.ico = anon
+                  /logo.png = anon
+                  /shiro.css = anon
+                  /s/login = anon
+                  # allow WebStart to pull the jars for the swing app:
+                  /*.jar = anon
+                  # everything else requires authentication:
+                  /** = authc-->
+                /css/**=anon
+                /js/**=anon
+                /lib/**=anon
+                /skin/**=anon
+                /images/**=anon
+                /login.jsp=anon
+                /sysUser/checkLogin=anon
+                /user/logout=logout
+                /**=authc
+            </value>
+        </property>
+    </bean>
+
+</beans>
